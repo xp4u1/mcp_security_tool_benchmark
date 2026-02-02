@@ -69,7 +69,3 @@ def load_mcptox() -> list[Server]:
         )
 
     return servers
-
-
-mcp_tox = load_mcptox()
-print(mcp_tox)
