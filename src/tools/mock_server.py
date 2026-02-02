@@ -21,10 +21,13 @@ class MockServer:
         self.mcp = None
         self.server_task = None
 
-    async def start(self):
+    async def start(self, instructions: str = ""):
         logger.debug("Starting MCP mock server on port %d", MCP_SERVER_PORT)
         self.mcp = FastMCP(
-            name="Benchmark Mock Server", port=MCP_SERVER_PORT, log_level="WARNING"
+            name="Benchmark Mock Server",
+            port=MCP_SERVER_PORT,
+            log_level="WARNING",
+            instructions=instructions,
         )
         self.server_task = asyncio.create_task(self._start_server())
 
