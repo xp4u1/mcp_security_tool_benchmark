@@ -12,11 +12,11 @@ class ScanResult:
     latency_ms: Optional[float] = None
 
 
-class DefenseAdapter(ABC):
+class ProxyAdapter(ABC):
     @abstractmethod
     async def initialize(self):
         """
-        Initialize the defense adapter.
+        Initialize the proxy adapter.
         """
 
     @abstractmethod
@@ -31,5 +31,5 @@ class DefenseAdapter(ABC):
     @abstractmethod
     async def close(self):
         """
-        Clean up any resources used by the defense adapter.
+        Clean up any resources used by the proxy adapter.
         """

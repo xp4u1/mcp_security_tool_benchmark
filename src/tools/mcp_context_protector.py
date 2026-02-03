@@ -7,8 +7,8 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
-from defense_adapter import DefenseAdapter, ScanResult
 from mcp_session import create_stdio_session
+from proxy_adapter import ProxyAdapter, ScanResult
 from tools.mock_server import MCP_SERVER_PORT
 
 load_dotenv()
@@ -69,14 +69,14 @@ def _parse_confidence(text: str) -> Optional[float]:
     return None
 
 
-class MCPContextProtector(DefenseAdapter):
+class MCPContextProtector(ProxyAdapter):
     def __init__(self):
         self._session_cm = None
         self.session = None
 
     async def initialize(self):
         """
-        Initialize the mcp-context-protector defense adapter.
+        Initialize the mcp-context-protector proxy adapter.
         """
 
         executable = os.getenv("MCP_CONTEXT_PROTECTOR_EXECUTABLE")
@@ -146,7 +146,7 @@ class MCPContextProtector(DefenseAdapter):
 
     async def close(self):
         """
-        Clean up any resources used by the MCP Context Protector defense adapter.
+        Clean up any resources used by the MCP Context Protector proxy adapter.
         """
         if self._session_cm is not None:
             await self._session_cm.__aexit__(None, None, None)
