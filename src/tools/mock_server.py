@@ -5,6 +5,9 @@ from typing import Any, Callable
 
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.prompts.base import Prompt
+from mcp.server.fastmcp.resources.types import TextResource
+from pydantic import AnyUrl
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +39,7 @@ class MockServer:
             if self.mcp:
                 await self.mcp.run_streamable_http_async()
             else:
-                logger.critical("FastMCP missing. Cannot start missing server")
+                logger.error("FastMCP missing. Cannot start missing server")
                 raise RuntimeError("Unable to start MCP server")
         except asyncio.CancelledError:
             logger.debug("MCP mock server task cancelled")
@@ -50,9 +53,42 @@ class MockServer:
     def add_tool(
         self, name: str, title: str, description: str, callback: Callable[..., Any]
     ):
+        if not self.mcp:
+            logger.error("No mock server instance found. Did you call 'start'?")
+            raise RuntimeError("Missing FastMCP server instance")
+
         self.mcp.add_tool(
             fn=callback,
             name=name,
             title=title,
             description=description,
+        )
+
+    def add_resource(self, name: str, content: str):
+        if not self.mcp:
+            logger.error("No mock server instance found. Did you call 'start'?")
+            raise RuntimeError("Missing FastMCP server instance")
+
+        self.mcp.add_resource(
+            TextResource(
+                uri=AnyUrl("resource://" + name),
+                name=name,
+                text=content,
+            )
+        )
+
+    def add_prompt(self, name: str, content: str):
+        if not self.mcp:
+            logger.error("No mock server instance found. Did you call 'start'?")
+            raise RuntimeError("Missing FastMCP server instance")
+
+        self.mcp.add_prompt(
+            Prompt(
+                name=name,
+                title=name,
+                description="Useful prompt",
+                arguments=[],
+                fn=lambda: content,
+                context_kwarg=None,
+            )
         )

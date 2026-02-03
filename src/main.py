@@ -46,6 +46,8 @@ async def run_mock_server():
                 description=tool.description,
                 callback=malicious_callback if tool.malicious else benign_callback,
             )
+            server.add_prompt(tool.name, tool.description)
+            server.add_resource(tool.name, tool.description)
 
         while True:
             await asyncio.sleep(10)
