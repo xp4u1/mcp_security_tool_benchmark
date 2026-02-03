@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -88,12 +89,21 @@ class MCPContextProtector(ProxyAdapter):
                 "MCP_CONTEXT_PROTECTOR_EXECUTABLE is not set in environment variables"
             )
 
+        server_address = f"http://127.0.0.1:{MCP_SERVER_PORT}/mcp"
+
+        approval_process = await asyncio.create_subprocess_shell(
+            f"printf 'y\\n' | {executable} --review-server --url '{server_address}'",
+        )
+        if await approval_process.wait() != 0:
+            logger.error("Failed to approve server in mcp-context-protector")
+            raise RuntimeError("Failed to approve the server configuration")
+
         command = [
             executable,
             "--guardrail-provider",
             "LlamaFirewall",  # todo: test this without LlamaFirewall
             "--url",
-            f"http://127.0.0.1:{MCP_SERVER_PORT}/mcp",
+            server_address,
         ]
 
         self._session_cm = create_stdio_session(command)
