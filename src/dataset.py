@@ -40,7 +40,7 @@ def load_mcptox() -> list[Server]:
         logger.debug("[%s] Add poisoned tools", {server_name})
         attacks = server_data["malicious_instance"]
 
-        for attack in attacks:
+        for index, attack in enumerate(attacks):
             [tool_name, tool_description] = attack["poisoned_tool"].split(
                 "Description: ", 1
             )
@@ -51,7 +51,8 @@ def load_mcptox() -> list[Server]:
 
             tools.append(
                 Tool(
-                    name=tool_name,
+                    # avoid name conflicts
+                    name=f"{index}_{tool_name}",
                     description=tool_description,
                     malicious=True,
                     category=attack["metadata"]["security risk"],
