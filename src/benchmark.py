@@ -1,8 +1,8 @@
 import logging
 
 from dataset import ServerData
+from mock_server import MCP_SERVER_PORT, MockServer
 from scan import ProxyAdapter, ScanAdapter, ScanResult
-from tools.mock_server import MCP_SERVER_PORT, MockServer
 
 logger = logging.getLogger(__name__)
 

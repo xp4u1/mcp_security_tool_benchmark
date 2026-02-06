@@ -5,9 +5,9 @@ import sys
 
 from benchmark import benchmark_proxy, benchmark_scanner
 from dataset import load_mcptox
+from mock_server import MockServer
 from tools.mcp_context_protector import MCPContextProtector
 from tools.mcp_shield import MCPShield
-from tools.mock_server import MockServer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmark")
