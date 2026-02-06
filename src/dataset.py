@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class Tool:
+class ToolData:
     name: str
     description: str
     malicious: bool
@@ -15,13 +15,13 @@ class Tool:
 
 
 @dataclass
-class Server:
+class ServerData:
     name: str
     instruction: str
-    tools: list[Tool]
+    tools: list[ToolData]
 
 
-def load_mcptox() -> list[Server]:
+def load_mcptox() -> list[ServerData]:
     with open("data/mcptox/response_all.json", "r", encoding="utf-8") as file:
         json_data = json.load(file)
 
@@ -34,7 +34,9 @@ def load_mcptox() -> list[Server]:
 
         for tool_name in server_data["tool_names"]:
             tools.append(
-                Tool(name=tool_name, description="", malicious=False, category="benign")
+                ToolData(
+                    name=tool_name, description="", malicious=False, category="benign"
+                )
             )
 
         logger.debug("[%s] Add poisoned tools", {server_name})
@@ -50,7 +52,7 @@ def load_mcptox() -> list[Server]:
             )
 
             tools.append(
-                Tool(
+                ToolData(
                     # avoid name conflicts
                     name=f"{index}_{tool_name}",
                     description=tool_description,
@@ -60,7 +62,7 @@ def load_mcptox() -> list[Server]:
             )
 
         servers.append(
-            Server(
+            ServerData(
                 name=server_name,
                 instruction=server_data[
                     "clean_system_promot"
