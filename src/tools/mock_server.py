@@ -4,10 +4,11 @@ import os
 from typing import Any, Callable
 
 from dotenv import load_dotenv
-from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts.base import Prompt
 from mcp.server.fastmcp.resources.types import TextResource
 from pydantic import AnyUrl
+
+from lib.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ class MockServer:
     def __init__(self):
         self.mcp = None
         self.server_task = None
+        self.uvicorn_server = None
 
     async def start(self, instructions: str = ""):
         logger.debug("Starting MCP mock server on port %d", MCP_SERVER_PORT)
@@ -32,23 +34,28 @@ class MockServer:
             log_level="WARNING",
             instructions=instructions,
         )
+        self.uvicorn_server = await self.mcp.prepare_streamable_http_async()
         self.server_task = asyncio.create_task(self._start_server())
 
     async def _start_server(self):
         try:
-            if self.mcp:
-                await self.mcp.run_streamable_http_async()
+            if self.uvicorn_server:
+                await self.uvicorn_server.serve()
             else:
-                logger.error("FastMCP missing. Cannot start missing server")
+                logger.error(
+                    "FastMCP Uvicorn server missing. Cannot start missing server"
+                )
                 raise RuntimeError("Unable to start MCP server")
         except asyncio.CancelledError:
             logger.debug("MCP mock server task cancelled")
+            if self.uvicorn_server:
+                await self.uvicorn_server.shutdown()
 
     async def stop(self):
         if self.server_task:
             self.server_task.cancel()
         else:
-            logger.debug("Stop called on missing FastMCP server")
+            logger.warning("Stop called on missing FastMCP server")
 
     def add_tool(
         self, name: str, title: str, description: str, callback: Callable[..., Any]
@@ -92,3 +99,11 @@ class MockServer:
                 context_kwarg=None,
             )
         )
+
+    async def clear_tools(self):
+        if not self.mcp:
+            logger.error("No mock server instance found. Did you call 'start'?")
+            raise RuntimeError("Missing FastMCP server instance")
+
+        for tool in await self.mcp.list_tools():
+            self.mcp.remove_tool(tool.name)
