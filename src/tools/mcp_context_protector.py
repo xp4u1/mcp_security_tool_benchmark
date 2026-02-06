@@ -9,7 +9,7 @@ from typing import Optional
 from dotenv import load_dotenv
 
 from mcp_session import create_stdio_session
-from proxy_adapter import ProxyAdapter, ScanResult
+from scan import ProxyAdapter, ScanResult
 from tools.mock_server import MCP_SERVER_PORT
 
 load_dotenv()

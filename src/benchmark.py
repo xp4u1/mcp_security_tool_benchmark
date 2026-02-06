@@ -1,7 +1,7 @@
 import logging
 
 from dataset import ServerData
-from proxy_adapter import ProxyAdapter, ScanResult
+from scan import ProxyAdapter, ScanResult
 from tools.mock_server import MockServer
 
 logger = logging.getLogger(__name__)
