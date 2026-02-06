@@ -36,18 +36,18 @@ class ProxyAdapter(ABC):
 
 class ScanAdapter(ABC):
     @abstractmethod
-    async def initialize(self):
+    async def initialize(self, server_address: str):
         """
         Initialize the scan adapter.
+
+        Args:
+            server_address: The mcp server to be scanned
         """
 
     @abstractmethod
-    async def evaluate_server(self, server_address: str) -> ScanResult:
+    async def evaluate_tools(self) -> dict[str, ScanResult]:
         """
-        Evaluate an mcp server for potential threats.
-
-        Args:
-            request: The incoming request to be evaluated.
+        Evaluate the mcp server's tools for potential threats.
         """
 
     @abstractmethod

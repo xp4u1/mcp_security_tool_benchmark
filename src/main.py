@@ -1,16 +1,31 @@
 import asyncio
 import json
 import logging
+import sys
 
-from benchmark import benchmark_proxy
+from benchmark import benchmark_proxy, benchmark_scanner
 from dataset import load_mcptox
 from tools.mcp_context_protector import MCPContextProtector
+from tools.mcp_shield import MCPShield
+from tools.mock_server import MockServer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmark")
 
 
-async def main():
+async def server():
+    mcptox = load_mcptox()
+    mock_server = MockServer()
+    await mock_server.start()
+
+    for tool in mcptox[0].tools:
+        mock_server.add_tool(tool.name, tool.name, tool.description, lambda: "Test")
+
+    while True:
+        await asyncio.sleep(10)
+
+
+async def test_proxy():
     mcptox = load_mcptox()
     mcp_context_protector = MCPContextProtector()
 
@@ -23,6 +38,39 @@ async def main():
 
     with open("results.json", "w", encoding="utf8") as file:
         json.dump(results, file)
+
+
+async def test_scanner():
+    mcptox = load_mcptox()
+
+    results = []
+    for server_data in mcptox[:1]:
+        logger.info("Benchmark '%s' server", server_data.name)
+        mcp_shield = MCPShield([tool.name for tool in server_data.tools])
+        scan_result = await benchmark_scanner(server_data, mcp_shield)
+        for tool_name, result in scan_result.items():
+            results.append({"name": tool_name, **result.__dict__})
+
+    with open("results.json", "w", encoding="utf8") as file:
+        json.dump(results, file)
+
+
+async def main():
+    if len(sys.argv) == 1:
+        await test_scanner()  # debug
+        sys.exit(0)
+
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} [proxy / scanner / server]")
+        sys.exit(1)
+
+    match sys.argv[1]:
+        case "proxy":
+            await test_proxy()
+        case "scanner":
+            await test_scanner()
+        case "server":
+            await server()
 
 
 if __name__ == "__main__":
