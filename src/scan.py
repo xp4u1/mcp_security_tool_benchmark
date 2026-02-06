@@ -32,3 +32,26 @@ class ProxyAdapter(ABC):
         """
         Clean up any resources used by the proxy adapter.
         """
+
+
+class ScanAdapter(ABC):
+    @abstractmethod
+    async def initialize(self):
+        """
+        Initialize the scan adapter.
+        """
+
+    @abstractmethod
+    async def evaluate_server(self, server_address: str) -> ScanResult:
+        """
+        Evaluate an mcp server for potential threats.
+
+        Args:
+            request: The incoming request to be evaluated.
+        """
+
+    @abstractmethod
+    async def close(self):
+        """
+        Clean up any resources used by the scan adapter.
+        """
