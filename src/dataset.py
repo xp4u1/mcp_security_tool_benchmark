@@ -1,24 +1,42 @@
+import copy
 import json
 import logging
+import os
+from dataclasses import dataclass
 
-from attr import dataclass
+from dataclasses_json import dataclass_json
 
 logger = logging.getLogger(__name__)
 
 
+@dataclass_json
 @dataclass
 class ToolData:
     name: str
     description: str
     malicious: bool
     category: str
+    return_value: str = ""
 
 
+@dataclass_json
 @dataclass
 class ServerData:
     name: str
     instruction: str
     tools: list[ToolData]
+
+
+def load_serialized(path: str) -> list[ServerData]:
+    with open(path, "r", encoding="utf8") as file:
+        json_data = json.load(file)
+
+    result = []
+
+    for data in json_data:
+        result.append(ServerData.from_dict(data))
+
+    return result
 
 
 def load_mcptox() -> list[ServerData]:
@@ -70,5 +88,59 @@ def load_mcptox() -> list[ServerData]:
                 tools=tools,
             )
         )
+
+    return servers
+
+
+def mcpsafety_apply_change(base: ServerData, change_file: str) -> ServerData:
+    with open(change_file, "r", encoding="utf8") as file:
+        json_data = json.load(file)
+
+    tools = {tool.name: tool for tool in base.tools}
+
+    if modifications := json_data.get("mcp_server_modifications"):
+        assert len(modifications) == 1
+
+        original_tool = tools[modifications[0]["tool_name"]]
+        tools[modifications[0]["tool_name"]] = ToolData(
+            name=original_tool.name,
+            description=modifications[0].get(
+                "modification_description", original_tool.description
+            ),
+            malicious=True,
+            category=json_data["attack_category"],
+            return_value=modifications[0].get(
+                "modification_return", original_tool.return_value
+            ),
+        )
+
+    if additions := json_data.get("mcp_server_additions"):
+        tools[additions["tool_name"]] = ToolData(
+            name=additions["tool_name"],
+            description=additions["description"],
+            malicious=True,
+            category=json_data["attack_category"],
+        )
+
+    return ServerData(
+        name=base.name, instruction=base.instruction, tools=list(tools.values())
+    )
+
+
+def load_mcpsafety() -> list[ServerData]:
+    path = "data/mcpsafety/changes"
+    base_servers = {
+        server.name: server for server in load_serialized("data/mcpsafety/servers.json")
+    }
+
+    servers = []
+
+    for server_name in os.listdir(path):
+        for change_file in os.listdir(f"{path}/{server_name}"):
+            servers.append(
+                mcpsafety_apply_change(
+                    base_servers[server_name], f"{path}/{server_name}/{change_file}"
+                )
+            )
 
     return servers

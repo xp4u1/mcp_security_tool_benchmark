@@ -4,7 +4,7 @@ import logging
 import sys
 
 from benchmark import benchmark_proxy, benchmark_scanner
-from dataset import load_mcptox
+from dataset import load_mcpsafety, load_mcptox
 from mock_server import MockServer
 from tools.mcp_context_protector import MCPContextProtector
 from tools.mcp_guard import MCPGuard
@@ -41,10 +41,10 @@ async def test_proxy():
 
 
 async def test_scanner():
-    mcptox = load_mcptox()
+    dataset = load_mcpsafety()
 
     results = []
-    for server_data in mcptox[:1]:
+    for server_data in dataset:
         logger.info("Benchmark '%s' server", server_data.name)
         mcp_guard = MCPGuard(server_data)
         # mcp_shield = MCPShield([tool.name for tool in server_data.tools])
