@@ -48,14 +48,13 @@ class MockServer:
                 raise RuntimeError("Unable to start MCP server")
         except asyncio.CancelledError:
             logger.debug("MCP mock server task cancelled")
-            if self.uvicorn_server:
-                await self.uvicorn_server.shutdown()
 
     async def stop(self):
         if self.server_task:
             self.server_task.cancel()
-        else:
-            logger.warning("Stop called on missing FastMCP server")
+
+        if self.uvicorn_server:
+            await self.uvicorn_server.shutdown()
 
     def add_tool(
         self, name: str, title: str, description: str, callback: Callable[..., Any]
