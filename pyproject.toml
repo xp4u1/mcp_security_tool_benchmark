@@ -8,4 +8,5 @@ dependencies = [
     "dataclasses-json>=0.6.7",
     "dotenv>=0.9.9",
     "mcp>=1.25.0",
+    "pandas>=2.3.3",
 ]
