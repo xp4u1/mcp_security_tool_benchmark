@@ -1,4 +1,3 @@
-import copy
 import json
 import logging
 import os
@@ -40,6 +39,8 @@ def load_serialized(path: str) -> list[ServerData]:
 
 
 def load_mcptox() -> list[ServerData]:
+    logger.info("Loading MCPTox dataset")
+
     with open("data/mcptox/response_all.json", "r", encoding="utf-8") as file:
         json_data = json.load(file)
 
@@ -83,8 +84,9 @@ def load_mcptox() -> list[ServerData]:
             ServerData(
                 name=server_name,
                 instruction=server_data[
+                    # spelling mistake in the dataset
                     "clean_system_promot"
-                ],  # spelling mistake in the dataset
+                ],
                 tools=tools,
             )
         )
@@ -93,6 +95,8 @@ def load_mcptox() -> list[ServerData]:
 
 
 def mcpsafety_apply_change(base: ServerData, change_file: str) -> ServerData:
+    logger.debug("Generating change '%s'", change_file)
+
     with open(change_file, "r", encoding="utf8") as file:
         json_data = json.load(file)
 
@@ -122,25 +126,31 @@ def mcpsafety_apply_change(base: ServerData, change_file: str) -> ServerData:
             category=json_data["attack_category"],
         )
 
+    if not (additions or modifications):
+        logger.debug("Skip '%s' (unsupported change/attack)", change_file)
+
     return ServerData(
         name=base.name, instruction=base.instruction, tools=list(tools.values())
     )
 
 
 def load_mcpsafety() -> list[ServerData]:
+    """
+    Load the MCPSafety dataset. Returns a new ServerData object for each
+    szenario (change file) from the dataset.
+    """
+
+    logger.info("Loading MCPSafety dataset")
+
     path = "data/mcpsafety/changes"
     base_servers = {
         server.name: server for server in load_serialized("data/mcpsafety/servers.json")
     }
 
-    servers = []
-
-    for server_name in os.listdir(path):
-        for change_file in os.listdir(f"{path}/{server_name}"):
-            servers.append(
-                mcpsafety_apply_change(
-                    base_servers[server_name], f"{path}/{server_name}/{change_file}"
-                )
-            )
-
-    return servers
+    return [
+        mcpsafety_apply_change(
+            base_servers[server_name], f"{path}/{server_name}/{change_file}"
+        )
+        for server_name in os.listdir(path)
+        for change_file in os.listdir(f"{path}/{server_name}")
+    ]
