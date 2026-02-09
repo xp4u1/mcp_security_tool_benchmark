@@ -7,7 +7,7 @@ from benchmark import benchmark_proxy, benchmark_scanner
 from dataset import load_mcptox
 from mock_server import MockServer
 from tools.mcp_context_protector import MCPContextProtector
-from tools.mcp_shield import MCPShield
+from tools.mcp_guard import MCPGuard
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmark")
@@ -46,8 +46,9 @@ async def test_scanner():
     results = []
     for server_data in mcptox[:1]:
         logger.info("Benchmark '%s' server", server_data.name)
-        mcp_shield = MCPShield([tool.name for tool in server_data.tools])
-        scan_result = await benchmark_scanner(server_data, mcp_shield)
+        mcp_guard = MCPGuard(server_data)
+        # mcp_shield = MCPShield([tool.name for tool in server_data.tools])
+        scan_result = await benchmark_scanner(server_data, mcp_guard)
         for tool_name, result in scan_result.items():
             results.append({"name": tool_name, **result.__dict__})
 
