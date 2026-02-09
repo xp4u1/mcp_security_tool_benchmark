@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import json
 import logging
 import sys
@@ -70,7 +71,10 @@ async def test_scanner():
 
                 results = pd.concat([results, benchmark_result])
 
-    results.to_csv("results.csv", index=False)
+    logger.info("Exporting results as csv")
+    results.replace({r"\r\n|\r|\n": r"\\n"}, regex=True).to_csv(
+        "results.csv", index=False, quoting=csv.QUOTE_ALL
+    )
 
 
 async def main():
