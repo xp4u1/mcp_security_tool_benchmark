@@ -90,6 +90,8 @@ class MCPShield(ScanAdapter):
     async def evaluate_tools(self) -> dict[str, ScanResult]:
         """
         Evaluate the mcp server's tools for potential threats.
+        All tools are scanned at once. Therefore the scan results
+        contain the average: scan_time / tool_count
         """
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -107,7 +109,7 @@ class MCPShield(ScanAdapter):
                 logger.error("Failed to scan server with mcp-shield")
                 raise RuntimeError("Failed to scan the server")
             end = timer()
-            latency_ms = (end - start) * 1000
+            latency_ms = ((end - start) * 1000) / len(self.tool_names)
 
             with open(output_path, "r", encoding="utf8") as file:
                 vulnerabilities = json.load(file)[0]["results"]["vulnerabilities"]
