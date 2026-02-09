@@ -1,6 +1,5 @@
-import json
 import logging
-import os
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from dataclasses_json import dataclass_json
@@ -26,131 +25,9 @@ class ServerData:
     tools: list[ToolData]
 
 
-def load_serialized(path: str) -> list[ServerData]:
-    with open(path, "r", encoding="utf8") as file:
-        json_data = json.load(file)
-
-    result = []
-
-    for data in json_data:
-        result.append(ServerData.from_dict(data))
-
-    return result
-
-
-def load_mcptox() -> list[ServerData]:
-    logger.info("Loading MCPTox dataset")
-
-    with open("data/mcptox/response_all.json", "r", encoding="utf-8") as file:
-        json_data = json.load(file)
-
-    servers = []
-
-    for server_name, server_data in json_data["servers"].items():
-        logger.debug("[%s] Add benign tools", {server_name})
-
-        tools = []
-
-        for tool_name in server_data["tool_names"]:
-            tools.append(
-                ToolData(
-                    name=tool_name, description="", malicious=False, category="benign"
-                )
-            )
-
-        logger.debug("[%s] Add poisoned tools", {server_name})
-        attacks = server_data["malicious_instance"]
-
-        for index, attack in enumerate(attacks):
-            [tool_name, tool_description] = attack["poisoned_tool"].split(
-                "Description: ", 1
-            )
-
-            tool_name = (
-                tool_name.replace("Tool: ", "", 1).replace("\n", "").replace("\\n", "")
-            )
-
-            tools.append(
-                ToolData(
-                    # avoid name conflicts
-                    name=f"{index}_{tool_name}",
-                    description=tool_description,
-                    malicious=True,
-                    category=attack["metadata"]["security risk"],
-                )
-            )
-
-        servers.append(
-            ServerData(
-                name=server_name,
-                instruction=server_data[
-                    # spelling mistake in the dataset
-                    "clean_system_promot"
-                ],
-                tools=tools,
-            )
-        )
-
-    return servers
-
-
-def mcpsafety_apply_change(base: ServerData, change_file: str) -> ServerData:
-    logger.debug("Generating change '%s'", change_file)
-
-    with open(change_file, "r", encoding="utf8") as file:
-        json_data = json.load(file)
-
-    tools = {tool.name: tool for tool in base.tools}
-
-    if modifications := json_data.get("mcp_server_modifications"):
-        assert len(modifications) == 1
-
-        original_tool = tools[modifications[0]["tool_name"]]
-        tools[modifications[0]["tool_name"]] = ToolData(
-            name=original_tool.name,
-            description=modifications[0].get(
-                "modification_description", original_tool.description
-            ),
-            malicious=True,
-            category=json_data["attack_category"],
-            return_value=modifications[0].get(
-                "modification_return", original_tool.return_value
-            ),
-        )
-
-    if additions := json_data.get("mcp_server_additions"):
-        tools[additions["tool_name"]] = ToolData(
-            name=additions["tool_name"],
-            description=additions["description"],
-            malicious=True,
-            category=json_data["attack_category"],
-        )
-
-    if not (additions or modifications):
-        logger.debug("Skip '%s' (unsupported change/attack)", change_file)
-
-    return ServerData(
-        name=base.name, instruction=base.instruction, tools=list(tools.values())
-    )
-
-
-def load_mcpsafety() -> list[ServerData]:
-    """
-    Load the MCPSafety dataset. Returns a new ServerData object for each
-    szenario (change file) from the dataset.
-    """
-
-    logger.info("Loading MCPSafety dataset")
-
-    path = "data/mcpsafety/changes"
-    base_servers = {
-        server.name: server for server in load_serialized("data/mcpsafety/servers.json")
-    }
-
-    return [
-        mcpsafety_apply_change(
-            base_servers[server_name], f"{path}/{server_name}/{change_file}"
-        )
-        for server_name in os.listdir(path)
-        for change_file in os.listdir(f"{path}/{server_name}")
-    ]
+class Dataset(ABC):
+    @abstractmethod
+    def load(self) -> list[ServerData]:
+        """
+        Load the dataset
+        """
