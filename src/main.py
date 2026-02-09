@@ -2,19 +2,25 @@ import asyncio
 import json
 import logging
 import sys
+from uuid import uuid4
+
+import pandas as pd
 
 from benchmark import benchmark_proxy, benchmark_scanner
-from dataset import load_mcpsafety, load_mcptox
+from data.mcpsafety import MCPSafety
+from data.mcptox import MCPTox
+from dataset import Dataset
 from mock_server import MockServer
 from tools.mcp_context_protector import MCPContextProtector
 from tools.mcp_guard import MCPGuard
+from tools.mcp_shield import MCPShield
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmark")
 
 
 async def server():
-    mcptox = load_mcptox()
+    mcptox = MCPTox().load()
     mock_server = MockServer()
     await mock_server.start()
 
@@ -26,7 +32,7 @@ async def server():
 
 
 async def test_proxy():
-    mcptox = load_mcptox()
+    mcptox = MCPTox().load()
     mcp_context_protector = MCPContextProtector()
 
     results = []
@@ -41,19 +47,30 @@ async def test_proxy():
 
 
 async def test_scanner():
-    dataset = load_mcpsafety()
+    datasets: list[Dataset] = [MCPTox(), MCPSafety()]
+    results = pd.DataFrame()
 
-    results = []
-    for server_data in dataset:
-        logger.info("Benchmark '%s' server", server_data.name)
-        mcp_guard = MCPGuard(server_data)
-        # mcp_shield = MCPShield([tool.name for tool in server_data.tools])
-        scan_result = await benchmark_scanner(server_data, mcp_guard)
-        for tool_name, result in scan_result.items():
-            results.append({"name": tool_name, **result.__dict__})
+    for dataset in datasets:
+        for server_data in dataset.load():
+            scenario_id = uuid4()
+            logger.info("Benchmark '%s' server (%s)", server_data.name, scenario_id)
 
-    with open("results.json", "w", encoding="utf8") as file:
-        json.dump(results, file)
+            scanners = [
+                MCPShield([tool.name for tool in server_data.tools]),
+                MCPGuard(server_data),
+            ]
+
+            for scanner in scanners:
+                logger.info(
+                    "Scanning scenario %s using %s", scenario_id, scanner.__module__
+                )
+                benchmark_result = await benchmark_scanner(server_data, scanner)
+                benchmark_result["dataset"] = dataset.__module__
+                benchmark_result["scenario_id"] = scenario_id
+
+                results = pd.concat([results, benchmark_result])
+
+    results.to_csv("results.csv", index=False)
 
 
 async def main():
