@@ -36,7 +36,7 @@ def make_callback(tool: ToolData):
 
 
 def init_server_content(server: MockServer, server_data: ServerData):
-    logger.debug("Register %d tools/prompts/resources", len(server_data.tools))
+    logger.debug("Register %d tools", len(server_data.tools))
     for tool in server_data.tools:
         server.add_tool(
             name=tool.name,
@@ -44,8 +44,8 @@ def init_server_content(server: MockServer, server_data: ServerData):
             description=tool.description,
             callback=make_callback(tool),
         )
-        server.add_prompt(tool.name, tool.description)
-        server.add_resource(tool.name, tool.description)
+        # server.add_prompt(tool.name, tool.description)
+        # server.add_resource(tool.name, tool.description)
 
 
 async def benchmark_proxy(
