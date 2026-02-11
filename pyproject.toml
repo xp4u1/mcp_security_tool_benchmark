@@ -10,3 +10,8 @@ dependencies = [
     "mcp>=1.25.0",
     "pandas>=2.3.3",
 ]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+]
