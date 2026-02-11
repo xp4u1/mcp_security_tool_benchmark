@@ -18,7 +18,7 @@ class ToolData:
     description: str
     malicious: bool
     category: str
-    return_value: str = ""
+    return_value: str | dict = ""
 
 
 @dataclass_json

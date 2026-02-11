@@ -71,6 +71,7 @@ class MockServer:
             name=name,
             title=title,
             description=description,
+            structured_output=False,
         )
 
     def add_resource(self, name: str, content: str):
