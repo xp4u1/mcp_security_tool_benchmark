@@ -24,12 +24,10 @@ logger = logging.getLogger("main")
 
 
 async def server():
-    mcptox = MCPTox().load()
+    dataset = load_dataset()
     mock_server = MockServer()
     await mock_server.start()
-
-    for tool in mcptox[0].tools:
-        mock_server.add_tool(tool.name, tool.name, tool.description, lambda: "Test")
+    init_server_content(mock_server, dataset[0].server)
 
     while True:
         await asyncio.sleep(10)
