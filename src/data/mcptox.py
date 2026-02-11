@@ -1,12 +1,12 @@
 import json
 import logging
 
-from dataset import Dataset, ServerData, ToolData
+from dataset import DatasetLoader, ServerData, ToolData
 
 logger = logging.getLogger(__name__)
 
 
-class MCPTox(Dataset):
+class MCPTox(DatasetLoader):
     def load(self) -> list[ServerData]:
         """
         Load the MCPTox dataset

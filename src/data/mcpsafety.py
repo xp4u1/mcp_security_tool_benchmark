@@ -2,12 +2,12 @@ import json
 import logging
 import os
 
-from dataset import Dataset, ServerData, ToolData
+from dataset import DatasetLoader, ServerData, ToolData
 
 logger = logging.getLogger(__name__)
 
 
-class MCPSafety(Dataset):
+class MCPSafety(DatasetLoader):
     def load_serialized(self, path: str) -> list[ServerData]:
         with open(path, "r", encoding="utf8") as file:
             json_data = json.load(file)
