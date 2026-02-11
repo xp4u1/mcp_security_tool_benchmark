@@ -54,7 +54,10 @@ class MockServer:
             self.server_task.cancel()
 
         if self.uvicorn_server:
-            await self.uvicorn_server.shutdown()
+            try:
+                await self.uvicorn_server.shutdown()
+            except AttributeError:
+                logger.warning("Unable to shutdown server")
 
     def add_tool(
         self, name: str, title: str, description: str, callback: Callable[..., Any]

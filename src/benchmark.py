@@ -57,13 +57,14 @@ async def benchmark_proxy(
 
     await proxy.initialize()
 
-    tool_call_results = []
-    for tool in server_data.tools:
-        result = await proxy.evaluate_request(generate_tool_call(tool.name, {}))
-        tool_call_results.append(result)
-
-    await proxy.close()
-    await server.stop()
+    try:
+        tool_call_results = []
+        for tool in server_data.tools:
+            result = await proxy.evaluate_request(generate_tool_call(tool.name, {}))
+            tool_call_results.append(result)
+    finally:
+        await proxy.close()
+        await server.stop()
 
     return tool_call_results
 
@@ -77,10 +78,11 @@ async def benchmark_scanner(
 
     await scanner.initialize(f"http://127.0.0.1:{MCP_SERVER_PORT}/mcp")
 
-    scan_results = await scanner.evaluate_tools()
-
-    await scanner.close()
-    await server.stop()
+    try:
+        scan_results = await scanner.evaluate_tools()
+    finally:
+        await scanner.close()
+        await server.stop()
 
     benchmark_result = []
     for tool in server_data.tools:
