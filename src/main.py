@@ -1,12 +1,11 @@
 import asyncio
 import csv
-import json
 import logging
 import sys
 
 import pandas as pd
 
-from benchmark import benchmark_proxy, benchmark_scanner
+from benchmark import benchmark_proxy, benchmark_scanner, init_server_content
 from data.mcpsafety import MCPSafety
 from data.mcptox import MCPTox
 from dataset import load_dataset, save_dataset
@@ -34,22 +33,26 @@ async def server():
 
 
 async def test_proxy():
-    mcptox = MCPTox().load()
-    mcp_context_protector = MCPContextProtector()
+    dataset = load_dataset()
+    results = pd.DataFrame()
+    proxies = [MCPContextProtector()]
 
-    results = []
-    for server_data in mcptox:
-        logger.info("Benchmark '%s' server", server_data.name)
-        scan_result = await benchmark_proxy(server_data, mcp_context_protector)
-        for result in scan_result:
-            results.append(result.__dict__)
+    for scenario in dataset[:2]:
+        logger.info("Benchmark '%s' server (%s)", scenario.server.name, scenario.id)
 
-    with open("results.json", "w", encoding="utf8") as file:
-        json.dump(results, file)
+        for proxy in proxies:
+            logger.info("Scanning scenario %s using %s", scenario.id, proxy.__module__)
+
+            benchmark_result = await benchmark_proxy(scenario.server, proxy)
+            results = pd.concat([results, benchmark_result])
+            export_csv(results, "/tmp/benchmark_results.csv")  # checkpoint
+
+    logger.info("Exporting results as csv")
+    export_csv(results, "results.csv")
 
 
 def export_csv(dataframe: pd.DataFrame, path: str):
-    dataframe.replace({r"\r\n|\r|\n": r"\\n"}, regex=True).to_csv(
+    dataframe.replace(r"\r\n|\r|\n", r"\\n", regex=True).to_csv(
         path, index=False, quoting=csv.QUOTE_ALL
     )
 

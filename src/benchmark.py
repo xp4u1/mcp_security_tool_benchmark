@@ -4,7 +4,7 @@ import pandas as pd
 
 from dataset import ServerData, ToolData
 from mock_server import MCP_SERVER_PORT, MockServer
-from scan import ProxyAdapter, ScanAdapter, ScanResult
+from scan import ProxyAdapter, ScanAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -48,25 +48,33 @@ def init_server_content(server: MockServer, server_data: ServerData):
         # server.add_resource(tool.name, tool.description)
 
 
-async def benchmark_proxy(
-    server_data: ServerData, proxy: ProxyAdapter
-) -> list[ScanResult]:
+async def benchmark_proxy(server_data: ServerData, proxy: ProxyAdapter) -> pd.DataFrame:
     server = MockServer()
     await server.start(instructions=server_data.instruction)
     init_server_content(server, server_data)
 
     await proxy.initialize()
 
+    benchmark_result = []
     try:
-        tool_call_results = []
         for tool in server_data.tools:
-            result = await proxy.evaluate_request(generate_tool_call(tool.name, {}))
-            tool_call_results.append(result)
+            scan_result = await proxy.evaluate_request(
+                generate_tool_call(tool.name, {})
+            )
+            benchmark_result.append(
+                {
+                    "proxy": proxy.__module__,
+                    "server": server_data.name,
+                    "server_instructions": server_data.instruction,
+                    **tool.__dict__,
+                    **scan_result.__dict__,
+                }
+            )
     finally:
         await proxy.close()
         await server.stop()
 
-    return tool_call_results
+    return pd.DataFrame(benchmark_result)
 
 
 async def benchmark_scanner(
