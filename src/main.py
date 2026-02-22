@@ -40,13 +40,19 @@ async def test_proxy():
     results = pd.DataFrame()
     proxies = [MCPContextProtector()]
 
-    for scenario in dataset[:2]:
+    for scenario in dataset:
+        if not any(tool.return_value != "" for tool in scenario.server.tools):
+            logger.info("Skipping '%s' server (%s)", scenario.server.name, scenario.id)
+            continue
+
         logger.info("Benchmark '%s' server (%s)", scenario.server.name, scenario.id)
 
         for proxy in proxies:
             logger.info("Scanning scenario %s using %s", scenario.id, proxy.__module__)
 
             benchmark_result = await benchmark_proxy(scenario.server, proxy)
+            benchmark_result["dataset"] = scenario.dataset
+            benchmark_result["scenario_id"] = scenario.id
             results = pd.concat([results, benchmark_result])
             export_csv(results, "/tmp/benchmark_results.csv")  # checkpoint
 
@@ -104,7 +110,7 @@ async def test_scanner():
 
 async def main():
     if len(sys.argv) == 1:
-        await test_scanner()  # debug
+        await test_proxy()  # debug
         sys.exit(0)
 
     if len(sys.argv) != 2:
