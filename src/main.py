@@ -13,6 +13,7 @@ from mock_server import MockServer
 from tools.mcp_context_protector import MCPContextProtector
 from tools.mcp_guard import MCPGuard
 from tools.mcp_scan import MCPScan
+from tools.mcp_scanner import MCPScanner
 from tools.mcp_shield import MCPShield
 
 LOG_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
@@ -20,6 +21,8 @@ DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 logging.basicConfig(format=LOG_FORMAT, datefmt=DATE_FORMAT, level=logging.INFO)
 logger = logging.getLogger("main")
+
+RETRY_TIMEOUT_SECONDS = 600
 
 
 async def server():
@@ -57,20 +60,6 @@ def export_csv(dataframe: pd.DataFrame, path: str):
     )
 
 
-async def _tmp(scenario, scanner):
-    try:
-        benchmark_result = await benchmark_scanner(scenario.server, scanner)
-        benchmark_result["dataset"] = scenario.dataset
-        benchmark_result["scenario_id"] = scenario.id
-
-        return benchmark_result
-    except RuntimeError:
-        logger.warning("Benchmark failed. Sleeping 10 minutes...")
-        await asyncio.sleep(600)
-        logger.warning("Trying again")
-        return await _tmp(scenario, scanner)
-
-
 async def test_scanner():
     dataset = load_dataset()
     results = pd.DataFrame()
@@ -78,21 +67,36 @@ async def test_scanner():
     for scenario in dataset:
         logger.info("Benchmark '%s' server (%s)", scenario.server.name, scenario.id)
 
-        # scanners = [
-        #     MCPShield([tool.name for tool in scenario.server.tools]),
-        #     MCPGuard(scenario.server),
-        # ]
-        scanners = [MCPScan()]
+        scanners = [
+            MCPShield([tool.name for tool in scenario.server.tools]),
+            MCPGuard(scenario.server),
+            MCPScan(),
+            MCPScanner(analyzers=["llm", "yara"]),
+        ]
 
         for scanner in scanners:
             logger.info(
                 "Scanning scenario %s using %s", scenario.id, scanner.__module__
             )
 
-            benchmark_result = await _tmp(scenario, scanner)
+            benchmark_result = None
+            while benchmark_result == None:
+                try:
+                    benchmark_result = await benchmark_scanner(scenario.server, scanner)
+                    benchmark_result["dataset"] = scenario.dataset
+                    benchmark_result["scenario_id"] = scenario.id
+
+                    return benchmark_result
+                except RuntimeError:
+                    logger.warning(
+                        "Benchmark failed. Sleeping %d seconds...",
+                        RETRY_TIMEOUT_SECONDS,
+                    )
+                    await asyncio.sleep(RETRY_TIMEOUT_SECONDS)
+                    logger.warning("Trying again")
+
             results = pd.concat([results, benchmark_result])
             export_csv(results, "/tmp/benchmark_results.csv")  # checkpoint
-            await asyncio.sleep(120)
 
     logger.info("Exporting results as csv")
     export_csv(results, "results.csv")
