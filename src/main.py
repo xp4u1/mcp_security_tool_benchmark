@@ -86,13 +86,11 @@ async def test_scanner():
             )
 
             benchmark_result = None
-            while benchmark_result == None:
+            while benchmark_result is None:
                 try:
                     benchmark_result = await benchmark_scanner(scenario.server, scanner)
                     benchmark_result["dataset"] = scenario.dataset
                     benchmark_result["scenario_id"] = scenario.id
-
-                    return benchmark_result
                 except RuntimeError:
                     logger.warning(
                         "Benchmark failed. Sleeping %d seconds...",
